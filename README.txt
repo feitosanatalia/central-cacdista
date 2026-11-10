@@ -2,7 +2,7 @@
 
 Aplicativo gratuito e simples para organizar os estudos para o Concurso de Admissão à Carreira de Diplomata (CACD). Ele transforma o tempo de estudo em informação útil, usando cada **item do edital** como unidade central: Matéria → Item do edital → Sessão de estudo.
 
-**Acesse o app:** https://SEU-USUARIO.github.io/central-cacdista/
+**Acesse o app:** https://feitosanatalia.github.io/central-cacdista/
 
 ## Recursos
 
