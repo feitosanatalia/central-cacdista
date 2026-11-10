@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central CACDista</title>
+<meta name="theme-color" content="#3b6cf6">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root { --bg:#f4f6fa; --card:#fff; --tx:#1d2330; --mut:#6b7385; --pri:#3b6cf6; --bd:#dde2ec; --bad:#d9534f; --ok:#2e9e5b; }
+  body.dark { --bg:#12151c; --card:#1c212c; --tx:#e8ebf2; --mut:#98a1b5; --bd:#2b3242; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--tx); }
+  header { display:flex; justify-content:space-between; align-items:center; padding:14px 22px; background:var(--card); border-bottom:1px solid var(--bd); gap:10px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; }
+  #edLabel { cursor:pointer; margin-top:4px; }
+  nav { display:flex; gap:6px; padding:10px 22px; flex-wrap:wrap; }
+  nav button { background:var(--card); color:var(--tx); border:1px solid var(--bd); padding:8px 14px; border-radius:8px; cursor:pointer; }
+  nav button.on { background:var(--pri); color:#fff; border-color:var(--pri); }
+  main { padding:10px 22px 30px; max-width:1100px; margin:auto; }
+  section { display:none; } section.on { display:block; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:18px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:17px; }
+  label { display:block; font-size:13px; color:var(--mut); margin:8px 0 3px; }
+  input, select, textarea { width:100%; padding:8px; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--tx); font-family:inherit; }
+  td select, td input { padding:4px; font-size:13px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; } .row > div { flex:1; min-width:150px; }
+  button.act { background:var(--pri); color:#fff; border:0; padding:10px 18px; border-radius:8px; cursor:pointer; margin:10px 8px 0 0; }
+  button.act:disabled { opacity:.45; cursor:default; }
+  button.sec { background:transparent; color:var(--tx); border:1px solid var(--bd); }
+  button.del { background:transparent; border:0; color:var(--bad); cursor:pointer; }
+  button.ok { background:transparent; border:1px solid var(--ok); color:var(--ok); border-radius:6px; cursor:pointer; padding:3px 8px; }
+  .clock { font-size:54px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums; margin:10px 0; }
+  .stats { display:flex; justify-content:center; gap:30px; color:var(--mut); font-size:14px; flex-wrap:wrap; }
+  .kpis { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .kpi { flex:1; min-width:140px; background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; }
+  .kpi b { display:block; font-size:24px; } .kpi span { color:var(--mut); font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--bd); vertical-align:middle; }
+  th { color:var(--mut); font-weight:500; }
+  .bar { background:var(--bd); border-radius:6px; height:10px; overflow:hidden; min-width:60px; }
+  .bar i { display:block; height:100%; background:var(--pri); }
+  .warn { color:var(--bad); font-weight:600; } .okc { color:var(--ok); } .mut { color:var(--mut); }
+  .tag { display:inline-block; background:var(--bg); border:1px solid var(--bd); border-radius:20px; padding:1px 9px; font-size:12px; margin:1px 3px 1px 0; }
+  .chart { display:flex; align-items:flex-end; gap:10px; height:150px; }
+  .chart div { flex:1; text-align:center; font-size:12px; color:var(--mut); }
+  .chart b { display:block; background:var(--pri); border-radius:5px 5px 0 0; margin-bottom:4px; }
+  footer { text-align:center; font-size:11px; color:var(--mut); opacity:.65; padding:10px 0 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Central CACDista</h1>
+    <span class="tag" id="edLabel" onclick="go('config')" title="Clique para gerenciar o edital"></span>
+  </div>
+  <button class="act sec" style="margin:0" onclick="toggleTheme()">Tema</button>
+</header>
+<nav id="nav"></nav>
+<main>
+
+<!-- HOJE -->
+<section id="s-hoje" class="on">
+  <div class="kpis" id="kpisHoje"></div>
+  <div class="card">
+    <h2>O que revisar hoje</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">Itens com revisão vencida, muito tempo sem estudo, baixo domínio ou erros recentes.</p>
+    <div style="overflow:auto"><table id="reviewTb"></table></div>
+  </div>
+  <div class="card">
+    <h2>Matérias sem estudo recente</h2>
+    <div id="staleList"></div>
+  </div>
+</section>
+
+<!-- SESSÃO -->
+<section id="s-sessao">
+  <div class="card">
+    <h2>Sessão de estudo</h2>
+    <div class="row">
+      <div><label>Matéria</label><select id="subj" onchange="fillItems('subj','item')"></select></div>
+      <div style="flex:2"><label>Item do edital</label><select id="item"></select></div>
+      <div><label>Atividade</label><select id="activity"></select></div>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="stats">
+      <span>Bruto: <b id="gross">00:00:00</b></span>
+      <span>Pausas: <b id="paused">00:00:00</b></span>
+      <span id="state">Parado</span>
+    </div>
+    <div style="text-align:center">
+      <button class="act" id="bStart" onclick="startS()">Iniciar</button>
+      <button class="act sec" id="bPause" onclick="pauseS()" disabled>Pausar</button>
+      <button class="act sec" id="bStop" onclick="stopS()" disabled>Finalizar</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div><label>Humor da sessão</label><select id="mood"></select></div>
+      <div><label>Domínio do item ao final (opcional)</label><select id="endMastery"></select></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Registro manual</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">Para sessões que você esqueceu de cronometrar. Usa matéria, item, atividade e humor selecionados acima.</p>
+    <div class="row">
+      <div><label>Data</label><input id="mDate" type="date"></div>
+      <div><label>Minutos líquidos</label><input id="mMin" type="number" min="1" value="60"></div>
+    </div>
+    <button class="act" onclick="addManual()">Adicionar sessão</button>
+  </div>
+  <div class="card">
+    <h2>Temporizador independente</h2>
+    <div class="row">
+      <div><label>Minutos</label><input id="tmMin" type="number" value="25" min="1"></div>
+      <div style="display:flex;align-items:flex-end"><button class="act" onclick="startTimer()">Iniciar</button><button class="act sec" onclick="stopTimer()">Parar</button></div>
+    </div>
+    <div class="clock" id="tmClock" style="font-size:36px">00:00</div>
+  </div>
+</section>
+
+<!-- EDITAL -->
+<section id="s-edital">
+  <div class="card">
+    <h2>Itens do edital (Anexo III)</h2>
+    <div class="row">
+      <div><label>Matéria</label><select id="fESubj" onchange="renderEdital()"></select></div>
+      <div><label>Status</label><select id="fEStatus" onchange="renderEdital()"></select></div>
+      <div><label>Buscar</label><input id="fESearch" oninput="renderEdital()" placeholder="Parte do nome"></div>
+    </div>
+    <div id="editalCount" class="mut" style="font-size:13px;margin:8px 0"></div>
+    <div style="overflow:auto"><table id="editalTb"></table></div>
+    <button class="act sec" onclick="exportCSV('items')">Exportar CSV</button>
+  </div>
+  <div class="card">
+    <h2>Progresso por matéria</h2>
+    <div style="overflow:auto"><table id="progTb"></table></div>
+  </div>
+  <div class="card">
+    <h2>Adicionar item próprio</h2>
+    <div class="row">
+      <div><label>Matéria</label><select id="iSubj"></select></div>
+      <div style="flex:2"><label>Nome do item</label><input id="iName" placeholder="Ex.: Tema extra"></div>
+    </div>
+    <button class="act" onclick="addItem()">Adicionar</button>
+  </div>
+  <div class="card">
+    <h2>Importar lista (opcional)</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">Uma linha por item, no formato <b>Matéria;Item</b>. Itens repetidos são ignorados.</p>
+    <textarea id="impText" rows="4" placeholder="Geografia;Tema extra"></textarea>
+    <button class="act" onclick="importItems(impText.value)">Importar texto</button>
+    <button class="act sec" onclick="document.getElementById('impCsv').click()">Escolher arquivo CSV</button>
+    <input type="file" id="impCsv" accept=".csv,.txt" style="display:none" onchange="importFile(event)">
+  </div>
+</section>
+
+<!-- CRONOGRAMA -->
+<section id="s-cronograma">
+  <div class="card">
+    <h2>Cronograma do CACD 2026 (Anexo I do edital)</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">As datas do edital são previstas e podem ser alteradas por edital posterior. Vagas: 60 (Terceiro Secretário).</p>
+    <div style="overflow:auto"><table id="cronTb"></table></div>
+  </div>
+  <div class="card">
+    <h2>Seus compromissos e datas</h2>
+    <div class="row">
+      <div><label>Data</label><input id="evDate" type="date"></div>
+      <div style="flex:3"><label>Descrição</label><input id="evText" placeholder="Ex.: Simulado, edital da próxima edição"></div>
+    </div>
+    <button class="act" onclick="addEvent()">Adicionar</button>
+    <div style="overflow:auto"><table id="evTb"></table></div>
+  </div>
+</section>
+
+<!-- HISTÓRICO -->
+<section id="s-historico">
+  <div class="card">
+    <h2>Histórico de sessões</h2>
+    <div class="row"><div><label>Matéria</label><select id="fHSubj" onchange="renderHist()"></select></div></div>
+    <div style="overflow:auto"><table id="histTb"></table></div>
+    <button class="act" onclick="exportCSV('sessions')">Exportar CSV</button>
+  </div>
+</section>
+
+<!-- RELATÓRIOS -->
+<section id="s-relatorios">
+  <div class="card">
+    <div class="row">
+      <div><label>Período</label>
+        <select id="period" onchange="renderReports()">
+          <option value="7">Últimos 7 dias</option><option value="30" selected>Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option><option value="0">Todo o período</option>
+        </select></div>
+    </div>
+    <div class="kpis" id="kpisRep" style="margin:14px 0 0"></div>
+  </div>
+  <div class="card"><h2>Últimos 7 dias (horas líquidas)</h2><div class="chart" id="chart7"></div></div>
+  <div class="card"><h2>Horas por matéria</h2><div style="overflow:auto"><table id="repTb"></table></div></div>
+  <div class="card"><h2>Como o tempo foi usado (por atividade)</h2><div style="overflow:auto"><table id="actTb"></table></div></div>
+</section>
+
+<!-- PROVAS -->
+<section id="s-provas">
+  <div class="card">
+    <h2>Registrar prova / simulado</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">Para <b>Objetiva 1ª fase (Certo/Errado)</b>, deixe pontos e total em branco e informe acertos, erros e brancos: o app calcula acertos − 0,25 × erros (nota de corte do edital: 120 de 240).</p>
+    <div class="row">
+      <div><label>Nome</label><input id="eName" placeholder="Simulado 01"></div>
+      <div><label>Data</label><input id="eDate" type="date"></div>
+      <div><label>Tipo</label><select id="eType"></select></div>
+      <div><label>Matéria</label><select id="eSubj"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Pontos obtidos</label><input id="eScore" type="number" step="0.01"></div>
+      <div><label>Total de pontos</label><input id="eTotal" type="number" step="0.01"></div>
+      <div><label>Acertos</label><input id="eOk" type="number" min="0"></div>
+      <div><label>Erros</label><input id="eWrong" type="number" min="0"></div>
+      <div><label>Em branco</label><input id="eBlank" type="number" min="0"></div>
+    </div>
+    <div class="row">
+      <div><label>Tempo gasto (min)</label><input id="eTime" type="number" min="0"></div>
+      <div><label>Confiança (1-5)</label><input id="eConf" type="number" min="1" max="5" value="3"></div>
+      <div><label>Dificuldade (1-5)</label><input id="eDiff" type="number" min="1" max="5" value="3"></div>
+    </div>
+    <label>Observações</label><textarea id="eNote" rows="2"></textarea>
+    <button class="act" onclick="addExam()">Salvar</button>
+  </div>
+  <div class="card">
+    <h2>Resultados</h2>
+    <div style="overflow:auto"><table id="exTb"></table></div>
+    <button class="act sec" onclick="exportCSV('exams')">Exportar CSV</button>
+  </div>
+  <div class="card">
+    <h2>Raio-X de desempenho por matéria</h2>
+    <div style="overflow:auto"><table id="xrayTb"></table></div>
+  </div>
+  <div class="card">
+    <h2>Estrutura das provas (Edital 2026)</h2>
+    <p class="mut" style="margin-top:0;font-size:13px"><b>1ª fase:</b> 240 itens Certo/Errado, 240 pontos, eliminatória. Cada item vale +1,00 se correto, −0,25 se errado e 0 em branco. Reprovado com menos de 120 pontos.<br>
+    <b>2ª fase:</b> eliminatória e classificatória. Aprovado com pelo menos 480 pontos na soma das provas.</p>
+    <div style="overflow:auto"><table id="structTb"></table></div>
+  </div>
+</section>
+
+<!-- ERROS -->
+<section id="s-erros">
+  <div class="card">
+    <h2>Registrar erro</h2>
+    <div class="row">
+      <div><label>Data</label><input id="rDate" type="date"></div>
+      <div><label>Matéria</label><select id="rSubj" onchange="fillItems('rSubj','rItem')"></select></div>
+      <div style="flex:2"><label>Item do edital</label><select id="rItem"></select></div>
+    </div>
+    <div class="row">
+      <div><label>Origem (prova, ano, questão)</label><input id="rSource" placeholder="CACD 2019, questão 45"></div>
+      <div><label>Sua resposta</label><input id="rGiven"></div>
+      <div><label>Resposta correta</label><input id="rCorrect"></div>
+      <div><label>Motivo do erro</label><select id="rReason"></select></div>
+    </div>
+    <label>Anotação (o que aprender com isso)</label><textarea id="rNote" rows="2"></textarea>
+    <button class="act" onclick="addError()">Salvar erro</button>
+  </div>
+  <div class="card"><h2>Erros por motivo</h2><div style="overflow:auto"><table id="errReasonTb"></table></div></div>
+  <div class="card">
+    <h2>Caderno de erros</h2>
+    <div class="row"><div><label>Filtrar matéria</label><select id="fRSubj" onchange="renderErrors()"></select></div></div>
+    <div style="overflow:auto"><table id="errTb"></table></div>
+    <button class="act sec" onclick="exportCSV('errors')">Exportar CSV</button>
+  </div>
+</section>
+
+<!-- CONFIG -->
+<section id="s-config">
+  <div class="card">
+    <h2>Edital</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">O app segue o <b>Edital nº 1, de 28/1/2026</b>: matérias, objetos de avaliação (Anexo III), provas, pontuação e cronograma. Se o edital for retificado, confira o PDF oficial e ajuste os itens na aba Edital.</p>
+    <div class="row"><div style="flex:2"><label>Etiqueta exibida no topo</label><input id="edLabelInput" onchange="setEdLabel(this.value)"></div></div>
+    <button class="act" onclick="reloadAnnex(false)">Adicionar itens do Anexo III que faltam</button>
+    <button class="act sec" onclick="reloadAnnex(true)">Substituir itens não estudados pelo Anexo III</button>
+    <p class="mut" style="font-size:13px">O botão "Substituir" apaga itens antigos que não têm sessão, erro nem alteração de status, e recarrega a lista do edital. Itens que você já estudou são preservados.</p>
+  </div>
+  <div class="card">
+    <h2>Matérias</h2>
+    <div class="row">
+      <div><label>Nova matéria</label><input id="newSubj"></div>
+      <div><label>Alerta após (dias sem estudar)</label><input id="newAlert" type="number" value="7" min="1"></div>
+    </div>
+    <button class="act" onclick="addSubj()">Adicionar</button>
+    <p class="mut" style="font-size:13px">Dica: a 2ª fase exige apenas um idioma adicional (espanhol ou francês). Remova o que você não for fazer.</p>
+    <div style="overflow:auto"><table id="subjTb"></table></div>
+  </div>
+  <div class="card">
+    <h2>Intervalos de revisão</h2>
+    <p class="mut" style="margin:0;font-size:13px">Ao finalizar uma sessão com domínio informado (ou ao marcar "Revisado"), a próxima revisão é agendada: domínio 1 = 1 dia, 2 = 3 dias, 3 = 7 dias, 4 = 15 dias, 5 = 30 dias. Você pode ajustar a data de cada item na aba Edital.</p>
+  </div>
+  <div class="card">
+    <h2>Backup</h2>
+    <p class="mut" style="margin-top:0;font-size:13px">Os dados ficam salvos neste navegador. Faça backup com frequência: limpar os dados do navegador apaga tudo.</p>
+    <button class="act" onclick="backup()">Baixar backup (JSON)</button>
+    <button class="act sec" onclick="document.getElementById('imp').click()">Restaurar backup</button>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="restore(event)">
+  </div>
+</section>
+
+</main>
+<footer>Criado por Natália Feitosa com ajuda de i.a.</footer>
+
+<script>
+const KEY = 'central_cacdista_v1';
+const STATUS = ['Não iniciado','Estudando','Revisando','Consolidado'];
+const ACTIVITIES = ['Teoria / leitura','Revisão','Questões','Questões discursivas','Redação','Resumo','Versão / tradução','Aula / áudio','Simulado / prova anterior'];
+const MOODS = ['','1 - Muito ruim','2 - Ruim','3 - Neutro','4 - Bom','5 - Ótimo'];
+const OBJ = 'Objetiva 1ª fase (Certo/Errado)';
+const EXAM_TYPES = [OBJ,'Discursiva 2ª fase','Redação','Resumo','Versão','Simulado geral','Prova anterior','Outro'];
+const REASONS = ['Falta de conteúdo','Distração','Interpretação','Gestão do tempo','Chute','Outro'];
+const PRIORITY = ['Baixa','Média','Alta'];
+const INTERVALS = {1:1, 2:3, 3:7, 4:15, 5:30};
+const DEFAULT_LABEL = 'Atualizado com o Edital nº 1/2026 — Anexo III incluído';
+const OLD_LABELS = ['Edital 2026 — base inicial, conferir com o PDF oficial','Atualizado com o Edital nº 1/2026 — Anexo III (conteúdo) a importar'];
+const VERSION = 3;
+
+const SUBJECTS = ['Língua Portuguesa','História do Brasil','História Mundial','Geografia','Língua Inglesa','Política Internacional','Economia','Direito','Língua Espanhola','Língua Francesa'];
+
+// ===== ANEXO III — Edital nº 1/2026 (um item por linha) =====
+const ANNEX = {
+'Língua Portuguesa': `
+1 Língua portuguesa: modalidade culta usada contemporaneamente no Brasil
+1.1 Sistema gráfico: ortografia, acentuação e pontuação; legibilidade
+1.2 Morfossintaxe
+1.3 Semântica
+1.4 Vocabulário
+2 Leitura e produção de textos
+2.1 Compreensão, interpretação e análise crítica de textos escritos em língua portuguesa
+2.2 Conhecimentos de linguística, literatura e estilística: funções da linguagem; níveis de linguagem; variação linguística; gêneros e estilos textuais; textos literários e não literários; denotação e conotação; figuras de linguagem; estrutura textual
+2.3 Redação de textos dissertativos: fundamentação conceitual e factual, consistência argumentativa, progressão temática e referencial, coerência, objetividade, precisão, clareza, concisão, coesão textual e correção gramatical
+2.3.1 Defeitos de conteúdo: descontextualização, generalização, simplismo, obviedade, paráfrase, cópia, tautologia, contradição
+2.3.2 Vícios de linguagem e estilo: ruptura de registro linguístico, coloquialismo, barbarismo, anacronismo, rebuscamento, redundância e linguagem estereotipada
+`,
+'Língua Inglesa': `
+1ª fase – 1 Compreensão de textos escritos em língua inglesa
+1ª fase – 2 Itens gramaticais relevantes para compreensão dos conteúdos semânticos
+2ª fase – 1 Redação em língua inglesa: expressão em nível avançado; domínio da gramática; qualidade e propriedade no emprego da linguagem; organização e desenvolvimento de ideias
+2ª fase – 2 Versão de um texto em português para o inglês: fidelidade ao texto-fonte, respeito à qualidade e ao registro, correção morfossintática e lexical
+`,
+'História do Brasil': `
+1 O período colonial
+1.1 A configuração territorial da América Portuguesa
+1.2 As dimensões econômicas e sociais da América Portuguesa
+2 O processo de independência
+2.1 Movimentos emancipacionistas
+2.2 A situação política e econômica europeia
+2.3 O Brasil sede do Estado monárquico português
+2.4 O Constitucionalismo português e a independência do Brasil
+2.5 A influência das ideias liberais e sua repercussão no Brasil
+3 O Primeiro Reinado (1822-1831)
+3.1 A Constituição de 1824
+3.2 Quadro político interno
+3.3 Política exterior do Primeiro Reinado
+4 A Regência (1831-1840)
+4.1 Centralização versus descentralização: reformas institucionais
+4.2 O Ato Adicional de 1834 e revoltas provinciais
+4.3 A dimensão externa
+5 O Segundo Reinado (1840-1889)
+5.1 O Estado centralizado; mudanças institucionais; os partidos políticos e o sistema eleitoral; a questão da unidade territorial
+5.2 Política externa: as relações com a Europa e os Estados Unidos da América; questões com o Reino Unido; a Guerra do Paraguai
+5.3 A questão da escravidão
+5.4 Crise do Estado Monárquico
+5.5 Sociedade e cultura: população, estrutura social, vida acadêmica, científica e literária
+5.6 Economia: a agroexportação; a expansão econômica e o trabalho assalariado; as políticas econômico-financeiras; a política alfandegária e suas consequências
+6 A Primeira República (1889-1930)
+6.1 A proclamação da República e os governos militares
+6.2 A Constituição de 1891
+6.3 O regime oligárquico: a "política dos estados"; coronelismo; sistema eleitoral; sistema partidário; a hegemonia de São Paulo e Minas Gerais
+6.4 A economia agroexportadora
+6.5 A política externa: a obra de Rio Branco; a II Conferência de Paz da Haia (1907); o Brasil e a Grande Guerra de 1914; o Brasil na Liga das Nações
+6.6 Sociedade e cultura: o Modernismo
+6.7 A crise dos anos 20 do século XX: tenentismo e revoltas
+6.8 A Revolução de 1930
+7 A Era Vargas (1930-1945)
+7.1 O processo político e o quadro econômico financeiro
+7.2 A Constituição de 1934
+7.3 A Constituição de 1937: o Estado Novo
+7.4 O contexto internacional dos anos 1930 e 1940; o Brasil e a Segunda Guerra Mundial
+7.5 Industrialização e legislação trabalhista
+7.6 Sociedade e cultura
+8 A República Liberal (1945-1964)
+8.1 A nova ordem política: os partidos políticos e eleições; a Constituição de 1946
+8.2 Industrialização e urbanização
+8.3 Política externa: relações com os EUA; a Guerra Fria; a Operação Pan-Americana; a "política externa independente"; o Brasil na ONU; o Brasil no Rio da Prata; o Brasil e a suspensão de Cuba na OEA
+8.4 Sociedade e cultura
+9 O Regime Militar (1964-1985)
+9.1 A Constituição de 1967 e as modificações de 1969
+9.2 A economia
+9.3 Política externa: relações com os EUA; o "pragmatismo responsável"; relações com a América Latina; relações com a África; o Brasil na ONU
+9.4 Sociedade e cultura
+9.5 O processo de transição política
+10 O processo democrático a partir de 1985
+10.1 A Constituição de 1988
+10.2 Partidos políticos e eleições
+10.3 Transformações econômicas
+10.4 Impactos da globalização
+10.5 Mudanças sociais
+10.6 Manifestações culturais
+10.7 Evolução da política externa
+10.8 MERCOSUL
+10.9 O Brasil na ONU
+11 Os impactos tecnológicos e digitais nas transformações políticas e sociais do Brasil no século XXI
+`,
+'História Mundial': `
+1 Estruturas e ideias econômicas
+1.1 Da Revolução Industrial ao capitalismo organizado: séculos XVIII a XX
+1.2 Características gerais e principais fases do desenvolvimento capitalista (desde aproximadamente 1780)
+1.3 Principais ideias econômicas: da Fisiocracia ao Liberalismo
+1.4 Marxismo
+1.5 As crises e os mecanismos anticrise: a Crise de 1929 e o New Deal
+1.6 A prosperidade no segundo pós-guerra
+1.7 Estado de bem-estar social (Welfare State) e sua crise
+1.8 O Pós-Fordismo e a acumulação flexível
+2 Revoluções
+2.1 A Revolução Francesa e as revoluções burguesas
+2.2 Processos de independência na América
+2.3 Conceitos e características gerais das revoluções contemporâneas
+2.4 Anarquismo
+2.5 Socialismo
+2.6 Revoluções no século XX: Rússia e China
+2.7 Revoluções na América Latina: os casos do México e de Cuba
+3 As relações internacionais
+3.1 Modelos e interpretações
+3.2 O Concerto Europeu e sua crise (1815-1918)
+3.3 As rivalidades coloniais
+3.4 Causas da Primeira Guerra Mundial
+3.5 Os 14 pontos de Wilson
+3.6 A Paz de Versalhes e a ordem mundial resultante (1919-1939)
+3.7 A Liga das Nações
+3.8 As causas da Segunda Guerra Mundial
+3.9 As conferências de Moscou, Teerã, Ialta, Potsdam e São Francisco e a ordem mundial decorrente
+3.10 Bretton Woods
+3.11 O Plano Marshall
+3.12 A Organização das Nações Unidas
+3.13 A Guerra Fria: a noção de bipolaridade (de Truman a Nixon)
+3.14 Os conflitos localizados
+3.15 A "détente"
+3.16 A "segunda Guerra Fria" (Reagan-Bush)
+3.17 A crise e a desagregação do bloco soviético
+4 Colonialismo, imperialismo, políticas de dominação
+4.1 O fim do colonialismo do Antigo Regime
+4.2 A nova expansão europeia
+4.3 Os debates acerca da natureza do Imperialismo
+4.4 A partilha da África e da Ásia
+4.5 O processo de dominação e a reação na Índia, China e Japão
+4.6 A descolonização
+4.7 A Conferência de Bandung
+4.8 O Não Alinhamento
+4.9 O conceito de Terceiro Mundo
+5 A evolução política e econômica nas Américas
+5.1 A expansão territorial nos EUA
+5.2 A Guerra de Secessão
+5.3 A constituição das identidades nacionais e dos Estados na América Latina; militarismo e caudilhismo
+5.4 A doutrina Monroe e sua aplicação; a política externa dos EUA na América Latina
+5.5 O Pan-Americanismo
+5.6 A OEA e o Tratado do Rio de Janeiro
+5.7 As experiências de integração nas Américas
+6 Ideias e regimes políticos
+6.1 Grandes correntes ideológicas da política no século XIX: liberalismo e nacionalismo
+6.2 A construção dos Estados nacionais: os casos da Alemanha e da Itália
+6.3 Grandes correntes ideológicas da política no século XX: democracia, fascismo, comunismo
+6.4 Ditaduras e regimes fascistas
+6.5 O novo nacionalismo e a questão do fundamentalismo contemporâneo
+6.6 O liberalismo no século XX
+7 A vida cultural
+7.1 O movimento romântico
+7.2 A cultura do imperialismo
+7.3 As vanguardas europeias
+7.4 O modernismo
+7.5 A pós-modernidade
+8 As relações internacionais no século XXI frente aos novos paradigmas digitais, as redes sociais e as modernas ferramentas tecnológicas de comunicação
+`,
+'Política Internacional': `
+1 Relações internacionais: conceitos básicos, atores, processos, instituições e principais paradigmas teóricos
+2 A política externa brasileira: evolução desde 1945, principais vertentes e linhas de ação
+3 O Brasil e a América do Sul
+3.1 Integração na América do Sul
+3.2 O MERCOSUL: origens do processo de integração no Cone Sul
+3.3 Objetivos, características e estágio atual de integração
+3.4 As iniciativas de integração física, energética, política, econômica e de defesa na América do Sul
+4 Argentina: política externa e relações com o Brasil
+5 Relações do Brasil com os demais países do hemisfério
+6 Estados Unidos da América: política externa e relações com o Brasil
+7 União Europeia: origens, evolução histórica, estrutura e funcionamento, situação atual, política externa e relações com o Brasil
+8 Rússia: política externa e relações com o Brasil
+9 África: política externa e relações com o Brasil
+10 O Brasil e a Ásia
+10.1 China, Índia e Japão: políticas externas e relações com o Brasil
+11 O Brasil e o Oriente Médio
+11.1 A questão israelo-palestina
+11.2 Síria, Iraque, Irã e outras situações nacionais relevantes
+12 A Comunidade dos Países de Língua Portuguesa
+13 O Brasil e a agenda internacional
+13.1 O multilateralismo de dimensão universal: a ONU; as conferências internacionais; os órgãos multilaterais
+13.2 Desenvolvimento e desenvolvimento sustentável
+13.3 Pobreza, insegurança alimentar e fome. Ações de combate à fome
+13.4 Meio ambiente
+13.5 Mar, espaço e Antártida
+13.6 Direitos humanos e políticas de identidade: gênero, raça e religião como vetores da política mundial
+13.7 Migrações internacionais, migrantes, refugiados e apátridas
+13.8 Comércio internacional, Organização Mundial do Comércio (OMC) e cadeias globais de suprimento
+13.9 Sistema financeiro internacional
+13.10 Desarmamento e não proliferação
+13.11 Crimes de guerra e crimes contra a humanidade: genocídio, holocausto e o Tribunal Penal Internacional
+13.12 Terrorismo
+13.13 Narcotráfico, crime transnacional e crimes cibernéticos de alcance global
+13.14 Reforma das Nações Unidas
+13.15 Operações de paz das Nações Unidas
+14 O Brasil e o sistema interamericano
+14.1 A Organização dos Estados Americanos
+15 O Brasil e a formação dos blocos econômicos, a negociação de acordos comerciais e a promoção comercial
+16 A dimensão da segurança na política exterior do Brasil
+17 O Brasil e as coalizões internacionais: o G-20, o IBAS e o BRICS
+18 O Brasil e a cooperação Sul-Sul
+19 Cooperação e a diplomacia da saúde
+`,
+'Geografia': `
+1 História da Geografia
+1.1 Expansão colonial e pensamento geográfico
+1.2 A Geografia moderna e a questão nacional na Europa
+1.3 As principais correntes teóricas da Geografia
+2 A Geografia da população
+2.1 Distribuição espacial da população no Brasil e no mundo
+2.2 Os grandes movimentos migratórios internacionais e intranacionais
+2.3 Dinâmica populacional e indicadores da qualidade de vida das populações
+3 Geografia econômica
+3.1 Globalização e divisão internacional do trabalho
+3.2 Formação e estrutura dos blocos econômicos internacionais
+3.3 Energia, logística e reordenamento territorial pós-fordista
+3.4 Disparidades regionais e planejamento no Brasil
+4 Geografia Agrária
+4.1 Distribuição geográfica da agricultura e pecuária mundiais
+4.2 Estruturação e funcionamento do agronegócio no Brasil e no mundo
+4.3 Estrutura fundiária, uso da terra e relações de produção no campo brasileiro
+5 Geografia Urbana
+5.1 Processo de urbanização e formação de redes de cidades
+5.2 Conurbação, metropolização e cidades-mundiais
+5.3 Dinâmica intraurbana das metrópoles brasileiras
+5.4 O papel das cidades médias na modernização do Brasil
+6 Geografia política
+6.1 Teorias geopolíticas e poder mundial
+6.2 Temas clássicos da geografia política: as fronteiras e as formas de apropriação política do espaço
+6.3 Relações Estado e território
+7 Geografia e gestão ambiental
+7.1 O meio ambiente nas relações internacionais: questões conceituais e institucionais
+7.2 Macrodivisão natural do espaço brasileiro: biomas, domínios e ecossistemas
+7.3 Política e gestão ambiental no Brasil
+`,
+'Economia': `
+1 Microeconomia
+1.1 Demanda do Consumidor: preferências; equilíbrio do consumidor; curva de demanda; elasticidade-preço e elasticidade-renda
+1.2 Oferta do Produtor: fatores de produção; função de produção; elasticidade-preço da oferta
+1.3 Tipos de Mercados e de bens: concorrência perfeita, monopólio e oligopólio; determinação de preços e quantidades de equilíbrio; tipos de bens; bens públicos; bens rivais; recursos comuns e bens comuns; externalidades
+2 Macroeconomia
+2.1 Contabilidade Nacional: conceitos de renda e produto; teorias clássica e keynesiana de determinação da renda; oferta e demanda agregadas; agregados macroeconômicos e identidades básicas das contas nacionais
+2.2 Contas externas: déficit e superávit; balanço de pagamentos (transações correntes, conta de capital e financeira); indicadores de liquidez externa; indicadores de solvência externa
+2.3 Economia do Setor Público e Política Fiscal: gastos e receitas do governo; política orçamentária e equilíbrio orçamentário; superávit e déficit público; abordagem ricardiana da dívida pública; endividamento e responsabilidade fiscal; papel do Governo; objetivos e instrumentos de política fiscal; efeitos fiscais sobre a política monetária; consumo, investimento, poupança e gasto do governo
+2.4 O modelo IS-LM-BP
+2.5 Teoria e Política monetária: funções da moeda; criação e distribuição de moeda; oferta da moeda e mecanismos de controle; procura da moeda; tipos de inflação; moeda e preços no longo prazo; Teoria Quantitativa da Moeda
+2.6 Política Monetária: papel do Banco Central; objetivos e instrumentos; inflação e taxa de juros; política monetária não convencional; conceitos básicos de regulação e supervisão do sistema bancário, financeiro e do mercado de capitais
+2.7 Crescimento e Desenvolvimento Econômico: teorias de crescimento; o papel da inovação: modelos Solow e Schumpeteriano
+2.8 Emprego e renda: conceito de desemprego; tipos de desemprego; determinação do nível de emprego; indicadores do mercado de trabalho; Lei de Okun
+3 Economia internacional
+3.1 Teorias de Comércio: teorias clássicas, neoclássicas e contemporâneas; comércio intrafirma e intra-setorial; economias de escala e concorrência imperfeita; a crítica de Prebisch e da Cepal; deterioração dos termos de troca
+3.2 Macroeconomia aberta: fluxos internacionais de bens, capitais e serviços; regimes de câmbio; taxa de câmbio nominal e real; determinantes da política cambial; relação poupança externa-crescimento; relação câmbio-juros-inflação
+3.3 Efeitos de tarifas, quotas, subsídios e outros instrumentos de política comercial
+4 História econômica brasileira
+4.1 A economia brasileira no Século XIX: a economia cafeeira
+4.2 Primeira República: políticas econômicas e evolução da economia brasileira; crescimento industrial; políticas de valorização do café
+4.3 A Industrialização Brasileira no Período 1930-1945: modelo de Industrialização por Substituição de Importações (ISI); falhas e críticas ao modelo de ISI
+4.4 A década de 1950: Plano SALTE; Plano de Metas; o pós-guerra e a nova fase de industrialização
+4.5 O Período 1962-1967: desaceleração no crescimento; Plano Trienal; reformas do PAEG; importância das reformas do PAEG para a retomada do crescimento em 1968
+4.6 A retomada do crescimento 1968-1973: causas do "Milagre Econômico"; I PND
+4.7 Desaceleração econômica e o segundo Plano Nacional de Desenvolvimento (II PND)
+4.8 A crise dos anos oitenta: interrupção do financiamento externo e políticas de ajuste; aceleração inflacionária e planos de combate à inflação; debate sobre a natureza da inflação no Brasil
+4.9 Economia Brasileira nos anos noventa: abertura (comercial e financeira) parcial; Plano Real
+5 Bancos digitais, meios de pagamento e os desafios da transição do "dinheiro de plástico" para o "dinheiro digital" na economia do século XXI
+`,
+'Direito': `
+1 Normas jurídicas
+2 Personalidade jurídica
+3 Constituição: conceito, classificações, primado da Constituição, controle de constitucionalidade
+4 Estado: elementos, soberania, formas, modelos de divisão de competência com entes subnacionais, sistemas de governo
+5 Estado democrático de direito. Conceito e objetivos. Divisão de poderes
+6 Organização e competências dos poderes no Direito Brasileiro
+7 Processo legislativo brasileiro
+8 Direitos e garantias fundamentais no ordenamento jurídico brasileiro
+9 Administração Pública no Brasil: princípios constitucionais da administração pública e dos servidores públicos; estrutura da Administração Pública Federal; atos administrativos; processo e procedimento administrativo
+10 Licitações e contratos administrativos
+11 Responsabilidade civil do Estado
+12 Direitos, deveres e responsabilidades do servidor público. Improbidade administrativa. Regime disciplinar e processo administrativo disciplinar
+13 Regime Jurídico dos Servidores do Serviço Exterior Brasileiro (Lei nº 11.440/2006)
+14 Finanças públicas. Normas orçamentárias
+15 Direito Internacional. Desenvolvimento. DIP e o Direito Interno. Constituição e Direito Internacional. Estados federados e entes federados
+16 Princípios que regem o Brasil nas relações internacionais (art. 4º CF/1988)
+17 DIP e direito internacional privado (Lei de Introdução às Normas do Direito Brasileiro)
+18 Estado. Surgimento e extinção de Estados. Sucessão de Estados. Direitos e deveres. Soberania. Reconhecimento de Estado e Governo
+19 Território. Formação do território brasileiro
+20 Povo. Nacionalidade: aquisição, perda e reaquisição. Proteção a brasileiros no exterior. Direitos e deveres de nacionais no exterior. Dupla e/ou múltipla nacionalidade. Situação jurídica do estrangeiro. Extradição. Apatridia e polipatria. Asilo
+21 Jurisdição. Relações diplomáticas e consulares. Imunidades. Responsabilidade internacional do Estado. Proteção diplomática
+22 Sujeitos especiais do Direito Internacional
+23 Fontes do DIP: tratados internacionais; costume internacional; princípios gerais; jurisprudência e doutrina; atos unilaterais; atos de organizações internacionais; analogia e equidade; jus cogens; obrigações erga omnes; soft law; acordos executivos; conflito entre fontes; incorporação de fontes extraconvencionais ao Direito brasileiro
+24 Solução pacífica de controvérsias. Prática diplomática brasileira. Bons ofícios. Mediação. Investigação ou inquérito. Conciliação. Meios jurisdicionais. Arbitragem. Meios judiciais. Corte Internacional de Justiça. Outros tribunais internacionais
+25 Organizações internacionais. Incorporação ao direito brasileiro dos atos de organizações internacionais. ONU. Agências da ONU. OEA. Carta Democrática Interamericana. Outras organizações regionais. Direito comparado
+26 Direito da Integração Regional. MERCOSUL. Relação com o Direito brasileiro. Órgão de Solução de Controvérsias. Jurisprudência
+27 Uso da força. Prática diplomática brasileira. Segurança coletiva. Uso da força e direitos humanos. Operações de manutenção da paz. Desarmamento e Não Proliferação. Controle de armas. Terrorismo
+28 Direito internacional dos direitos humanos. Exigibilidade. Tratados de direitos humanos ratificados pelo Brasil. Incorporação no direito brasileiro. Sistemas convencionais de petições. Conselho de Direitos Humanos. Órgãos de tratados. Sistema Interamericano de Direitos Humanos
+29 Conflitos armados e o direito internacional. Direito Internacional Humanitário. Direito Internacional dos Refugiados. O instituto do refúgio no direito brasileiro
+30 Direito penal internacional. Tribunais internacionais penais. Tribunal Penal Internacional
+31 Direito do comércio internacional. Organização Mundial do Comércio. Acordos. Órgão de Solução de Controvérsias. Jurisprudência
+32 Direito Internacional do Meio Ambiente. Direito Internacional do Mar. Tribunal Internacional do Direito do Mar
+33 Direito internacional do trabalho. OIT. Convenções, recomendações e supervisão normativa
+34 Áreas além dos limites da jurisdição exclusiva dos Estados
+35 Cooperação Jurídica internacional. Matéria penal e cível. Regimes vigentes no direito brasileiro
+`,
+'Língua Espanhola': `
+1 Elaboração de resumo, em espanhol, a partir de texto em língua espanhola: capacidade de síntese e de reelaboração em registro culto
+2 Versão de um texto em português para o espanhol: fidelidade ao texto-fonte, respeito à qualidade e ao registro, correção morfossintática e lexical
+`,
+'Língua Francesa': `
+1 Elaboração de resumo, em francês, a partir de texto em língua francesa: capacidade de síntese e de reelaboração em registro culto
+2 Versão de um texto em português para o francês: fidelidade ao texto-fonte, respeito à qualidade e ao registro, correção morfossintática e lexical
+`
+};
+
+// Estrutura da 2ª fase
+const STRUCT = [
+ ['Língua Portuguesa','4 h','Redação (65 a 70 linhas) + resumo (até 30 linhas)','70 + 30 = 100'],
+ ['Língua Inglesa','4 h','Redação (65 a 70 linhas) + versão PT→EN (20 a 40 linhas)','70 + 30 = 100'],
+ ['História do Brasil','5 h','2 questões de até 60 linhas (30 pts) + 2 de até 40 linhas (20 pts)','60 + 40 = 100'],
+ ['Política Internacional','5 h','2 questões de até 60 linhas (30 pts) + 2 de até 40 linhas (20 pts)','60 + 40 = 100'],
+ ['Geografia','5 h','2 questões de até 60 linhas (30 pts) + 2 de até 40 linhas (20 pts)','60 + 40 = 100'],
+ ['Economia','5 h','2 questões de até 60 linhas (30 pts) + 2 de até 40 linhas (20 pts)','60 + 40 = 100'],
+ ['Direito','5 h','2 questões de até 60 linhas (30 pts) + 2 de até 40 linhas (20 pts)','60 + 40 = 100'],
+ ['Língua Espanhola ou Francesa','4 h','Resumo no idioma (até 60 linhas) + versão PT→idioma (20 a 30 linhas)','50 + 50 = 100']
+];
+
+// Cronograma previsto (Anexo I)
+const CRON = [
+ ['2026-02-04','2026-02-25','Inscrições (10h do 1º dia às 18h do último)'],
+ ['2026-03-13',null,'Data final para pagamento da taxa de inscrição'],
+ ['2026-03-29',null,'Prova objetiva da 1ª fase'],
+ ['2026-04-02',null,'Divulgação do gabarito oficial preliminar'],
+ ['2026-04-17',null,'Resultado final da prova objetiva e convocação para a 2ª fase'],
+ ['2026-04-25',null,'2ª fase: Língua Portuguesa (manhã) e História do Brasil (tarde)'],
+ ['2026-04-26',null,'2ª fase: Língua Inglesa (manhã) e Geografia (tarde)'],
+ ['2026-05-02',null,'2ª fase: Política Internacional (manhã) e Economia (tarde)'],
+ ['2026-05-03',null,'2ª fase: Direito (manhã) e Língua Espanhola ou Francesa (tarde)'],
+ ['2026-05-21',null,'Resultado provisório das provas escritas da 2ª fase'],
+ ['2026-06-03',null,'Resultado final das provas escritas da 2ª fase'],
+ ['2026-07-01',null,'Resultado final no concurso e homologação (previsto)']
+];
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const fmt = ms => { ms = Math.max(0, ms); const s = Math.floor(ms/1000); return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`; };
+const hrs = ms => (ms/3600000).toFixed(1) + ' h';
+const dayKey = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const today = () => dayKey(Date.now());
+const addDays = (str, n) => { const [y,m,d] = str.split('-').map(Number); return dayKey(new Date(y, m-1, d + n)); };
+const diffDays = (a, b) => { const p = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d).getTime(); }; return Math.round((p(a) - p(b)) / 86400000); };
+const br = s => s.split('-').reverse().join('/');
+const daysSince = t => Math.floor((Date.now() - t) / 86400000);
+const opts = arr => arr.map(x => `<option>${esc(x)}</option>`).join('');
+
+function mergeSubjects(d) {
+  SUBJECTS.forEach(n => { if (!d.subjects.some(s => s.name.toLowerCase() === n.toLowerCase())) d.subjects.push({id: uid(), name: n, alertDays: 7}); });
+}
+function loadAnnex(d) {
+  let n = 0;
+  Object.keys(ANNEX).forEach(sn => {
+    let sb = d.subjects.find(s => s.name.toLowerCase() === sn.toLowerCase());
+    if (!sb) { sb = {id: uid(), name: sn, alertDays: 7}; d.subjects.push(sb); }
+    ANNEX[sn].split('\n').forEach(l => {
+      l = l.trim(); if (!l) return;
+      if (d.items.some(i => i.subjectId === sb.id && i.name === l)) return;
+      d.items.push({id: uid(), subjectId: sb.id, name: l, status: STATUS[0], priority: 'Média', mastery: 0, nextReview: '', notes: '', annex: true});
+      n++;
+    });
+  });
+  return n;
+}
+function seed() {
+  const d = { subjects: [], items: [], sessions: [], exams: [], errors: [], events: [], active: null, dark: false, editalLabel: DEFAULT_LABEL, version: VERSION };
+  mergeSubjects(d); loadAnnex(d); return d;
+}
+let db = JSON.parse(localStorage.getItem(KEY) || 'null') || seed();
+['items','exams','errors','events'].forEach(k => db[k] = db[k] || []);
+if (!db.version || db.version < VERSION) {
+  db.version = VERSION; mergeSubjects(db); loadAnnex(db);
+  if (!db.editalLabel || OLD_LABELS.includes(db.editalLabel)) db.editalLabel = DEFAULT_LABEL;
+}
+const save = () => localStorage.setItem(KEY, JSON.stringify(db));
+save();
+
+const subjName = id => (db.subjects.find(s => s.id === id) || {name: '(removida)'}).name;
+const itemName = id => id ? (db.items.find(i => i.id === id) || {name: '(removido)'}).name : '';
+const subjOpts = (withEmpty, emptyLabel) => (withEmpty ? `<option value="">${emptyLabel || '—'}</option>` : '') + db.subjects.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+
+// ---------- Edital ----------
+function renderLabel() {
+  $('edLabel').textContent = db.editalLabel;
+  if (document.activeElement !== $('edLabelInput')) $('edLabelInput').value = db.editalLabel;
+}
+function setEdLabel(v) { db.editalLabel = v.trim() || DEFAULT_LABEL; save(); renderLabel(); }
+function reloadAnnex(replace) {
+  if (replace) {
+    if (!confirm('Remover itens sem sessões, sem erros e sem alteração, e recarregar o Anexo III?')) return;
+    const used = new Set([...db.sessions.map(s => s.itemId), ...db.errors.map(e => e.itemId)]);
+    db.items = db.items.filter(i => used.has(i.id) || i.status !== 'Não iniciado' || i.mastery || i.nextReview);
+  }
+  const n = loadAnnex(db); save(); renderAll();
+  alert(n + ' item(ns) do Anexo III adicionado(s).');
+}
+
+// ---------- Navegação ----------
+const tabs = [['hoje','Hoje'],['sessao','Sessão'],['edital','Edital'],['cronograma','Cronograma'],['historico','Histórico'],['relatorios','Relatórios'],['provas','Provas'],['erros','Erros'],['config','Configurações']];
+$('nav').innerHTML = tabs.map(t => `<button data-t="${t[0]}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
+function go(t) {
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 's-' + t));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  renderAll();
+}
+function toggleTheme() { db.dark = !db.dark; save(); applyTheme(); }
+function applyTheme() { document.body.classList.toggle('dark', db.dark); }
+
+// ---------- Estatísticas ----------
+function itemStats(id) {
+  const ss = db.sessions.filter(s => s.itemId === id);
+  return { net: ss.reduce((a, s) => a + s.net, 0), last: ss.length ? Math.max(...ss.map(s => s.start)) : null };
+}
+function setReview(item, mastery) {
+  if (mastery >= 1 && mastery <= 5) { item.mastery = mastery; item.nextReview = addDays(today(), INTERVALS[mastery]); }
+}
+
+// ---------- Sessão ----------
+function startS() {
+  if (!$('subj').value) return alert('Cadastre uma matéria em Configurações.');
+  db.active = { subjectId: $('subj').value, itemId: $('item').value, activity: $('activity').value, start: Date.now(), pausedMs: 0, pauseStart: null };
+  save(); tick();
+}
+function pauseS() {
+  const a = db.active; if (!a) return;
+  if (a.pauseStart) { a.pausedMs += Date.now() - a.pauseStart; a.pauseStart = null; } else a.pauseStart = Date.now();
+  save(); tick();
+}
+function finishSession(sess) {
+  db.sessions.push(sess);
+  const item = db.items.find(i => i.id === sess.itemId);
+  if (item) {
+    if (item.status === 'Não iniciado') item.status = 'Estudando';
+    const m = parseInt($('endMastery').value);
+    if (m) setReview(item, m);
+  }
+}
+function stopS() {
+  const a = db.active; if (!a) return;
+  const end = Date.now();
+  if (a.pauseStart) { a.pausedMs += end - a.pauseStart; a.pauseStart = null; }
+  const gross = end - a.start;
+  finishSession({ id: uid(), subjectId: a.subjectId, itemId: a.itemId, activity: a.activity, mood: parseInt($('mood').value) || 0,
+    start: a.start, end, gross, paused: a.pausedMs, net: gross - a.pausedMs });
+  db.active = null; save(); tick(); renderAll();
+}
+function addManual() {
+  if (!$('subj').value) return alert('Selecione uma matéria.');
+  const min = parseFloat($('mMin').value);
+  if (!min || min <= 0) return alert('Informe os minutos.');
+  const [y, m, d] = ($('mDate').value || today()).split('-').map(Number);
+  const start = new Date(y, m-1, d, 12, 0).getTime(), net = min * 60000;
+  finishSession({ id: uid(), subjectId: $('subj').value, itemId: $('item').value, activity: $('activity').value,
+    mood: parseInt($('mood').value) || 0, start, end: start + net, gross: net, paused: 0, net, manual: true });
+  save(); renderAll(); alert('Sessão adicionada.');
+}
+function tick() {
+  const a = db.active, now = Date.now();
+  if (!a) {
+    $('clock').textContent = '00:00:00'; $('gross').textContent = '00:00:00'; $('paused').textContent = '00:00:00';
+    $('state').textContent = 'Parado'; $('bStart').disabled = false; $('bPause').disabled = true; $('bStop').disabled = true;
+    $('bPause').textContent = 'Pausar'; return;
+  }
+  const paused = a.pausedMs + (a.pauseStart ? now - a.pauseStart : 0), gross = now - a.start;
+  $('clock').textContent = fmt(gross - paused);
+  $('gross').textContent = fmt(gross); $('paused').textContent = fmt(paused);
+  $('state').textContent = (a.pauseStart ? 'Em pausa' : 'Estudando') + ' — ' + subjName(a.subjectId);
+  $('bStart').disabled = true; $('bPause').disabled = false; $('bStop').disabled = false;
+  $('bPause').textContent = a.pauseStart ? 'Retomar' : 'Pausar';
+}
+setInterval(tick, 500);
+
+// ---------- Temporizador ----------
+let tmEnd = null, tmInt = null;
+function startTimer() {
+  tmEnd = Date.now() + (+$('tmMin').value || 25) * 60000;
+  clearInterval(tmInt);
+  tmInt = setInterval(() => {
+    const left = tmEnd - Date.now();
+    if (left <= 0) { clearInterval(tmInt); $('tmClock').textContent = '00:00'; alert('Tempo esgotado!'); return; }
+    const s = Math.ceil(left / 1000);
+    $('tmClock').textContent = `${pad(Math.floor(s/60))}:${pad(s%60)}`;
+  }, 250);
+}
+function stopTimer() { clearInterval(tmInt); $('tmClock').textContent = '00:00'; }
+
+// ---------- HOJE ----------
+function reviewQueue() {
+  const t = today(), recent = Date.now() - 14 * 86400000, list = [];
+  db.items.forEach(it => {
+    const st = itemStats(it.id), sb = db.subjects.find(s => s.id === it.subjectId);
+    const reasons = []; let score = 0;
+    if (it.nextReview && it.nextReview <= t) { reasons.push('Revisão vencida'); score += 3; }
+    if ((it.status === 'Estudando' || it.status === 'Revisando') && st.last && sb && daysSince(st.last) >= sb.alertDays) {
+      reasons.push(`${daysSince(st.last)} dias sem estudo`); score += 2;
+    }
+    if (it.mastery && it.mastery <= 2 && st.last) { reasons.push('Baixo domínio'); score += 2; }
+    const errs = db.errors.filter(e => e.itemId === it.id && new Date(e.date).getTime() >= recent).length;
+    if (errs) { reasons.push(`${errs} erro(s) recente(s)`); score += Math.min(3, errs); }
+    if (it.priority === 'Alta' && score) score += 1;
+    if (score) list.push({it, reasons, score});
+  });
+  return list.sort((a, b) => b.score - a.score);
+}
+function markReviewed(id) {
+  const it = db.items.find(i => i.id === id); if (!it) return;
+  setReview(it, it.mastery || 3);
+  if (it.status !== 'Consolidado') it.status = 'Revisando';
+  save(); renderToday();
+}
+function renderToday() {
+  const t = today();
+  const todayMs = db.sessions.filter(s => dayKey(s.start) === t).reduce((a, s) => a + s.net, 0);
+  const weekS = db.sessions.filter(s => s.start >= new Date(addDays(t, -6) + 'T00:00:00').getTime());
+  const weekMs = weekS.reduce((a, s) => a + s.net, 0);
+  const daysStudied = new Set(weekS.map(s => dayKey(s.start))).size;
+  const q = reviewQueue();
+  $('kpisHoje').innerHTML =
+    `<div class="kpi"><b>${hrs(todayMs)}</b><span>Estudadas hoje</span></div>
+     <div class="kpi"><b>${hrs(weekMs)}</b><span>Últimos 7 dias</span></div>
+     <div class="kpi"><b>${daysStudied}/7</b><span>Dias estudados na semana</span></div>
+     <div class="kpi"><b>${q.length}</b><span>Itens para revisar</span></div>`;
+  $('reviewTb').innerHTML = q.length
+    ? '<tr><th>Item</th><th>Matéria</th><th>Motivos</th><th>Domínio</th><th></th></tr>' +
+      q.slice(0, 30).map(r => `<tr><td>${esc(r.it.name)}</td><td>${esc(subjName(r.it.subjectId))}</td>
+        <td>${r.reasons.map(x => `<span class="tag">${esc(x)}</span>`).join('')}</td>
+        <td>${r.it.mastery ? r.it.mastery + '/5' : '—'}</td>
+        <td><button class="ok" onclick="markReviewed('${r.it.id}')">Revisado</button></td></tr>`).join('')
+    : '<tr><td class="mut">Nada pendente. Registre sessões nos itens do edital (aba Sessão) para alimentar a fila.</td></tr>';
+  const stale = db.subjects.map(sb => {
+    const ss = db.sessions.filter(s => s.subjectId === sb.id);
+    const last = ss.length ? Math.max(...ss.map(s => s.start)) : null;
+    const d = last ? daysSince(last) : null;
+    return {sb, d, alert: d === null || d >= sb.alertDays};
+  }).filter(x => x.alert).sort((a, b) => (b.d ?? 9999) - (a.d ?? 9999));
+  $('staleList').innerHTML = stale.length
+    ? stale.map(x => `<span class="tag warn">${esc(x.sb.name)}: ${x.d === null ? 'nunca estudada' : x.d + ' dia(s)'}</span>`).join('')
+    : '<span class="okc">Todas as matérias estão em dia.</span>';
+}
+
+// ---------- EDITAL ----------
+function addItem() {
+  const n = $('iName').value.trim();
+  if (!n || !$('iSubj').value) return alert('Informe matéria e nome do item.');
+  db.items.push({id: uid(), subjectId: $('iSubj').value, name: n, status: STATUS[0], priority: 'Média', mastery: 0, nextReview: '', notes: ''});
+  $('iName').value = ''; save(); renderAll();
+}
+function setItem(id, k, v) {
+  const it = db.items.find(i => i.id === id); if (!it) return;
+  it[k] = (k === 'mastery') ? (parseInt(v) || 0) : v;
+  save(); renderToday(); renderProgress();
+}
+function delItem(id) {
+  if (confirm('Remover item? As sessões antigas continuam no histórico.')) { db.items = db.items.filter(i => i.id !== id); save(); renderAll(); }
+}
+function renderEdital() {
+  const fs = $('fESubj').value, fst = $('fEStatus').value, q = $('fESearch').value.trim().toLowerCase();
+  const list = db.items.filter(i => (!fs || i.subjectId === fs) && (!fst || i.status === fst) && (!q || i.name.toLowerCase().includes(q)));
+  $('editalCount').textContent = `${list.length} item(ns) exibido(s) de ${db.items.length}`;
+  const sel = (id, k, arr, cur) => `<select onchange="setItem('${id}','${k}',this.value)">${arr.map(x => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  $('editalTb').innerHTML =
+    '<tr><th style="min-width:260px">Item</th><th>Matéria</th><th>Status</th><th>Prioridade</th><th>Domínio</th><th>Horas</th><th>Último estudo</th><th>Próxima revisão</th><th></th></tr>' +
+    (list.length ? list.map(i => {
+      const st = itemStats(i.id);
+      const mast = `<select onchange="setItem('${i.id}','mastery',this.value)">${[0,1,2,3,4,5].map(n => `<option value="${n}"${n === (i.mastery||0) ? ' selected' : ''}>${n ? n + '/5' : '—'}</option>`).join('')}</select>`;
+      return `<tr><td>${esc(i.name)}</td><td>${esc(subjName(i.subjectId))}</td>
+        <td>${sel(i.id, 'status', STATUS, i.status)}</td><td>${sel(i.id, 'priority', PRIORITY, i.priority)}</td>
+        <td>${mast}</td><td>${hrs(st.net)}</td>
+        <td>${st.last ? new Date(st.last).toLocaleDateString('pt-BR') : '—'}</td>
+        <td><input type="date" value="${esc(i.nextReview)}" onchange="setItem('${i.id}','nextReview',this.value)"></td>
+        <td><button class="del" onclick="delItem('${i.id}')">Remover</button></td></tr>`;
+    }).join('') : '<tr><td class="mut" colspan="9">Nenhum item. Vá em Configurações e clique em "Adicionar itens do Anexo III que faltam".</td></tr>');
+  renderProgress();
+}
+function renderProgress() {
+  $('progTb').innerHTML = '<tr><th>Matéria</th><th>Itens</th><th>Estudando</th><th>Revisando</th><th>Consolidado</th><th style="width:25%">Consolidado</th></tr>' +
+    db.subjects.map(sb => {
+      const its = db.items.filter(i => i.subjectId === sb.id), n = its.length || 1;
+      const c = s => its.filter(i => i.status === s).length;
+      return `<tr><td>${esc(sb.name)}</td><td>${its.length}</td><td>${c('Estudando')}</td><td>${c('Revisando')}</td><td>${c('Consolidado')}</td>
+        <td><div class="bar"><i style="width:${c('Consolidado') / n * 100}%"></i></div></td></tr>`;
+    }).join('');
+}
+function importItems(text) {
+  const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return alert('Nada para importar.');
+  const delim = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',';
+  let added = 0, skipped = 0;
+  lines.forEach((line, idx) => {
+    const p = line.indexOf(delim); if (p < 0) { skipped++; return; }
+    const strip = s => s.trim().replace(/^"|"$/g, '').trim();
+    const sName = strip(line.slice(0, p)), iName = strip(line.slice(p + 1));
+    if (!sName || !iName) { skipped++; return; }
+    if (idx === 0 && /^mat[eé]ria$/i.test(sName) && /^item/i.test(iName)) return;
+    let sb = db.subjects.find(s => s.name.toLowerCase() === sName.toLowerCase());
+    if (!sb) { sb = {id: uid(), name: sName, alertDays: 7}; db.subjects.push(sb); }
+    if (db.items.some(i => i.subjectId === sb.id && i.name.toLowerCase() === iName.toLowerCase())) { skipped++; return; }
+    db.items.push({id: uid(), subjectId: sb.id, name: iName, status: STATUS[0], priority: 'Média', mastery: 0, nextReview: '', notes: ''});
+    added++;
+  });
+  save(); renderAll(); $('impText').value = '';
+  alert(`${added} item(ns) importado(s). ${skipped} ignorado(s).`);
+}
+function importFile(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => importItems(r.result); r.readAsText(f, 'UTF-8');
+  ev.target.value = '';
+}
+
+// ---------- CRONOGRAMA ----------
+function whenTxt(a, b) {
+  const t = today(), end = b || a;
+  if (end < t) return '<span class="mut">Concluído</span>';
+  if (a <= t) return '<span class="okc">Em andamento / hoje</span>';
+  return `<b>em ${diffDays(a, t)} dia(s)</b>`;
+}
+function addEvent() {
+  const d = $('evDate').value, t = $('evText').value.trim();
+  if (!d || !t) return alert('Informe data e descrição.');
+  db.events.push({id: uid(), date: d, text: t}); $('evText').value = ''; save(); renderCron();
+}
+function delEvent(id) { db.events = db.events.filter(e => e.id !== id); save(); renderCron(); }
+function renderCron() {
+  $('cronTb').innerHTML = '<tr><th>Data</th><th>Atividade</th><th>Situação</th></tr>' +
+    CRON.map(c => `<tr><td>${br(c[0])}${c[1] ? ' a ' + br(c[1]) : ''}</td><td>${esc(c[2])}</td><td>${whenTxt(c[0], c[1])}</td></tr>`).join('');
+  const ev = [...db.events].sort((a, b) => a.date.localeCompare(b.date));
+  $('evTb').innerHTML = ev.length
+    ? '<tr><th>Data</th><th>Descrição</th><th>Situação</th><th></th></tr>' +
+      ev.map(e => `<tr><td>${br(e.date)}</td><td>${esc(e.text)}</td><td>${whenTxt(e.date)}</td><td><button class="del" onclick="delEvent('${e.id}')">Excluir</button></td></tr>`).join('')
+    : '<tr><td class="mut">Nenhum compromisso cadastrado.</td></tr>';
+}
+
+// ---------- HISTÓRICO ----------
+function renderHist() {
+  const f = $('fHSubj').value;
+  const list = db.sessions.filter(s => !f || s.subjectId === f).sort((a, b) => b.start - a.start);
+  $('histTb').innerHTML =
+    '<tr><th>Data</th><th>Matéria</th><th>Item</th><th>Atividade</th><th>Humor</th><th>Bruto</th><th>Pausas</th><th>Líquido</th><th></th></tr>' +
+    list.map(s => `<tr><td>${new Date(s.start).toLocaleString('pt-BR')}${s.manual ? ' <span class="tag">manual</span>' : ''}</td>
+      <td>${esc(subjName(s.subjectId))}</td><td>${esc(itemName(s.itemId))}</td><td>${esc(s.activity)}</td>
+      <td>${s.mood || '—'}</td><td>${fmt(s.gross)}</td><td>${fmt(s.paused)}</td><td><b>${fmt(s.net)}</b></td>
+      <td><button class="del" onclick="delSession('${s.id}')">Excluir</button></td></tr>`).join('');
+}
+function delSession(id) { if (confirm('Excluir sessão?')) { db.sessions = db.sessions.filter(s => s.id !== id); save(); renderAll(); } }
+
+// ---------- RELATÓRIOS ----------
+function renderReports() {
+  const p = parseInt($('period').value);
+  const since = p ? new Date(addDays(today(), -(p - 1)) + 'T00:00:00').getTime() : 0;
+  const ss = db.sessions.filter(s => s.start >= since);
+  const total = ss.reduce((a, s) => a + s.net, 0);
+  const days = new Set(ss.map(s => dayKey(s.start))).size;
+  const moods = ss.filter(s => s.mood).map(s => s.mood);
+  const itemsTouched = new Set(ss.filter(s => s.itemId).map(s => s.itemId)).size;
+  $('kpisRep').innerHTML =
+    `<div class="kpi"><b>${hrs(total)}</b><span>Horas líquidas</span></div>
+     <div class="kpi"><b>${ss.length}</b><span>Sessões</span></div>
+     <div class="kpi"><b>${days}</b><span>Dias estudados</span></div>
+     <div class="kpi"><b>${itemsTouched}</b><span>Itens do edital tocados</span></div>
+     <div class="kpi"><b>${moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1) : '—'}</b><span>Humor médio (1-5)</span></div>`;
+  const dl = []; for (let i = 6; i >= 0; i--) dl.push(addDays(today(), -i));
+  const byDay = Object.fromEntries(dl.map(d => [d, 0]));
+  db.sessions.forEach(s => { const k = dayKey(s.start); if (k in byDay) byDay[k] += s.net; });
+  const max = Math.max(...Object.values(byDay), 1);
+  $('chart7').innerHTML = dl.map(d => `<div><b style="height:${byDay[d] / max * 100}px"></b>${hrs(byDay[d])}<br>${d.slice(8)}/${d.slice(5, 7)}</div>`).join('');
+  const tot = total || 1;
+  const rows = db.subjects.map(sb => {
+    const x = ss.filter(s => s.subjectId === sb.id), net = x.reduce((a, s) => a + s.net, 0);
+    const m = x.filter(s => s.mood).map(s => s.mood);
+    return {sb, net, n: x.length, mood: m.length ? (m.reduce((a, b) => a + b, 0) / m.length).toFixed(1) : '—'};
+  }).sort((a, b) => b.net - a.net);
+  $('repTb').innerHTML = '<tr><th>Matéria</th><th>Horas líquidas</th><th>%</th><th style="width:22%"></th><th>Sessões</th><th>Humor médio</th></tr>' +
+    rows.map(r => `<tr><td>${esc(r.sb.name)}</td><td>${hrs(r.net)}</td><td>${(r.net / tot * 100).toFixed(0)}%</td>
+      <td><div class="bar"><i style="width:${r.net / tot * 100}%"></i></div></td><td>${r.n}</td><td>${r.mood}</td></tr>`).join('');
+  const acts = ACTIVITIES.map(a => ({a, net: ss.filter(s => s.activity === a).reduce((x, s) => x + s.net, 0)})).sort((x, y) => y.net - x.net);
+  $('actTb').innerHTML = '<tr><th>Atividade</th><th>Horas</th><th>%</th><th style="width:30%"></th></tr>' +
+    acts.map(r => `<tr><td>${esc(r.a)}</td><td>${hrs(r.net)}</td><td>${(r.net / tot * 100).toFixed(0)}%</td>
+      <td><div class="bar"><i style="width:${r.net / tot * 100}%"></i></div></td></tr>`).join('');
+}
+
+// ---------- PROVAS ----------
+function numOrNull(id) { const v = parseFloat($(id).value); return isNaN(v) ? null : v; }
+function addExam() {
+  let score = numOrNull('eScore'), tot = numOrNull('eTotal');
+  const ok = numOrNull('eOk'), wrong = numOrNull('eWrong'), blank = numOrNull('eBlank');
+  const type = $('eType').value;
+  if (type === OBJ && score === null && ok !== null && wrong !== null) {
+    score = ok - 0.25 * wrong;
+    tot = ok + wrong + (blank || 0);
+  }
+  if (!$('eName').value.trim() || score === null || tot === null || tot <= 0) return alert('Preencha nome e pontos (ou, na objetiva, acertos e erros).');
+  db.exams.push({id: uid(), name: $('eName').value.trim(), date: $('eDate').value || today(), type, subjectId: $('eSubj').value,
+    score, total: tot, pct: score / tot * 100, ok, wrong, blank,
+    time: numOrNull('eTime'), conf: +$('eConf').value, diff: +$('eDiff').value, note: $('eNote').value});
+  ['eName','eScore','eTotal','eOk','eWrong','eBlank','eTime','eNote'].forEach(i => $(i).value = '');
+  save(); renderExams();
+}
+function delExam(id) { if (confirm('Excluir?')) { db.exams = db.exams.filter(e => e.id !== id); save(); renderExams(); } }
+function renderExams() {
+  const list = [...db.exams].sort((a, b) => b.date.localeCompare(a.date));
+  $('exTb').innerHTML = '<tr><th>Data</th><th>Nome</th><th>Tipo</th><th>Matéria</th><th>Pontos</th><th>%</th><th>Corte (50%)</th><th>A/E/B</th><th>Tempo</th><th>Conf.</th><th>Dif.</th><th></th></tr>' +
+    list.map(e => `<tr><td>${esc(e.date)}</td><td>${esc(e.name)}</td><td>${esc(e.type)}</td><td>${e.subjectId ? esc(subjName(e.subjectId)) : 'Geral'}</td>
+      <td>${Number(e.score.toFixed(2))}/${Number(e.total.toFixed(2))}</td><td><b>${e.pct.toFixed(1)}%</b></td>
+      <td>${e.type === OBJ ? (e.pct >= 50 ? '<span class="okc">Acima</span>' : '<span class="warn">Abaixo</span>') : '—'}</td>
+      <td>${e.ok ?? '-'}/${e.wrong ?? '-'}/${e.blank ?? '-'}</td><td>${e.time ? e.time + ' min' : '—'}</td>
+      <td>${e.conf}/5</td><td>${e.diff}/5</td><td><button class="del" onclick="delExam('${e.id}')">Excluir</button></td></tr>`).join('');
+  const xr = db.subjects.map(sb => {
+    const es = db.exams.filter(e => e.subjectId === sb.id);
+    if (!es.length) return null;
+    const avg = es.reduce((a, e) => a + e.pct, 0) / es.length;
+    const conf = es.reduce((a, e) => a + e.conf, 0) / es.length;
+    const errs = db.errors.filter(e => e.subjectId === sb.id).length;
+    return {name: sb.name, avg, conf, n: es.length, errs};
+  }).filter(Boolean).sort((a, b) => a.avg - b.avg);
+  $('xrayTb').innerHTML = '<tr><th>Prioridade</th><th>Matéria</th><th>Média</th><th>Confiança média</th><th>Provas</th><th>Erros no caderno</th><th>Diagnóstico</th></tr>' +
+    (xr.length ? xr.map((r, i) => `<tr><td>${i + 1}º</td><td>${esc(r.name)}</td><td>${r.avg.toFixed(1)}%</td><td>${r.conf.toFixed(1)}/5</td><td>${r.n}</td><td>${r.errs}</td>
+      <td>${r.avg < 60 ? '<span class="warn">Lacuna</span>' : r.avg < 75 ? 'Em evolução' : '<span class="okc">Ponto forte</span>'}${r.conf >= 4 && r.avg < 60 ? ' (excesso de confiança)' : ''}</td></tr>`).join('')
+      : '<tr><td class="mut">Registre provas associadas a uma matéria para ver o Raio-X.</td></tr>');
+  $('structTb').innerHTML = '<tr><th>Prova</th><th>Duração</th><th>Formato</th><th>Pontos</th></tr>' +
+    STRUCT.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}</td><td>${esc(r[2])}</td><td>${r[3]}</td></tr>`).join('');
+}
+
+// ---------- ERROS ----------
+function addError() {
+  if (!$('rSubj').value) return alert('Selecione a matéria.');
+  db.errors.push({id: uid(), date: $('rDate').value || today(), subjectId: $('rSubj').value, itemId: $('rItem').value,
+    source: $('rSource').value, given: $('rGiven').value, correct: $('rCorrect').value, reason: $('rReason').value, note: $('rNote').value});
+  ['rSource','rGiven','rCorrect','rNote'].forEach(i => $(i).value = '');
+  save(); renderErrors(); renderToday();
+}
+function delError(id) { if (confirm('Excluir erro?')) { db.errors = db.errors.filter(e => e.id !== id); save(); renderErrors(); } }
+function renderErrors() {
+  const f = $('fRSubj').value;
+  const list = db.errors.filter(e => !f || e.subjectId === f).sort((a, b) => b.date.localeCompare(a.date));
+  const tot = db.errors.length || 1;
+  $('errReasonTb').innerHTML = '<tr><th>Motivo</th><th>Erros</th><th>%</th><th style="width:30%"></th></tr>' +
+    REASONS.map(r => ({r, n: db.errors.filter(e => e.reason === r).length})).sort((a, b) => b.n - a.n).map(x =>
+      `<tr><td>${esc(x.r)}</td><td>${x.n}</td><td>${(x.n / tot * 100).toFixed(0)}%</td><td><div class="bar"><i style="width:${x.n / tot * 100}%"></i></div></td></tr>`).join('');
+  $('errTb').innerHTML = '<tr><th>Data</th><th>Matéria</th><th>Item</th><th>Origem</th><th>Resposta</th><th>Correta</th><th>Motivo</th><th>Anotação</th><th></th></tr>' +
+    list.map(e => `<tr><td>${esc(e.date)}</td><td>${esc(subjName(e.subjectId))}</td><td>${esc(itemName(e.itemId))}</td><td>${esc(e.source)}</td>
+      <td>${esc(e.given)}</td><td>${esc(e.correct)}</td><td>${esc(e.reason)}</td><td>${esc(e.note)}</td>
+      <td><button class="del" onclick="delError('${e.id}')">Excluir</button></td></tr>`).join('');
+}
+
+// ---------- CONFIG ----------
+function addSubj() {
+  const n = $('newSubj').value.trim(); if (!n) return;
+  if (db.subjects.some(s => s.name.toLowerCase() === n.toLowerCase())) return alert('Matéria já existe.');
+  db.subjects.push({id: uid(), name: n, alertDays: +$('newAlert').value || 7}); $('newSubj').value = ''; save(); renderAll();
+}
+function setAlert(id, v) { const s = db.subjects.find(x => x.id === id); if (s) { s.alertDays = Math.max(1, +v || 7); save(); renderToday(); } }
+function delSubj(id) {
+  const n = db.items.filter(i => i.subjectId === id).length;
+  if (!confirm(`Remover matéria${n ? ' e seus ' + n + ' itens do edital' : ''}? As sessões antigas continuam no histórico.`)) return;
+  db.subjects = db.subjects.filter(s => s.id !== id); db.items = db.items.filter(i => i.subjectId !== id); save(); renderAll();
+}
+function renderSubjTb() {
+  $('subjTb').innerHTML = '<tr><th>Matéria</th><th>Itens</th><th>Alerta (dias)</th><th></th></tr>' +
+    db.subjects.map(s => `<tr><td>${esc(s.name)}</td><td>${db.items.filter(i => i.subjectId === s.id).length}</td>
+      <td><input type="number" min="1" value="${s.alertDays}" style="width:80px" onchange="setAlert('${s.id}',this.value)"></td>
+      <td><button class="del" onclick="delSubj('${s.id}')">Remover</button></td></tr>`).join('');
+}
+
+// ---------- Selects ----------
+function setSel(id, html) { const el = $(id), v = el.value; el.innerHTML = html; if (v && [...el.options].some(o => o.value === v || o.text === v)) el.value = v; }
+function fillItems(subjId, itemId) {
+  const sid = $(subjId).value;
+  setSel(itemId, '<option value="">(sem item específico)</option>' +
+    db.items.filter(i => i.subjectId === sid).map(i => `<option value="${i.id}">${esc(i.name.length > 110 ? i.name.slice(0, 107) + '...' : i.name)}</option>`).join(''));
+}
+function fillSelects() {
+  ['subj','eSubj','rSubj','iSubj'].forEach(id => setSel(id, subjOpts(id === 'eSubj', 'Geral')));
+  ['fESubj','fHSubj','fRSubj'].forEach(id => setSel(id, subjOpts(true, 'Todas')));
+  setSel('fEStatus', '<option value="">Todos</option>' + opts(STATUS));
+  setSel('activity', opts(ACTIVITIES));
+  setSel('mood', MOODS.map((m, i) => `<option value="${i || ''}">${m || 'Não informar'}</option>`).join(''));
+  setSel('endMastery', '<option value="">Não atualizar</option>' + [1,2,3,4,5].map(n => `<option value="${n}">${n}/5</option>`).join(''));
+  setSel('eType', opts(EXAM_TYPES));
+  setSel('rReason', opts(REASONS));
+  fillItems('subj', 'item'); fillItems('rSubj', 'rItem');
+}
+
+// ---------- Exportação e backup ----------
+function download(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type})); a.download = name; a.click();
+}
+function exportCSV(kind) {
+  let rows;
+  if (kind === 'sessions') rows = [['Inicio','Fim','Materia','Item','Atividade','Humor','Bruto(min)','Pausas(min)','Liquido(min)']].concat(
+    db.sessions.map(s => [new Date(s.start).toISOString(), new Date(s.end).toISOString(), subjName(s.subjectId), itemName(s.itemId), s.activity, s.mood || '',
+      (s.gross / 60000).toFixed(1), (s.paused / 60000).toFixed(1), (s.net / 60000).toFixed(1)]));
+  else if (kind === 'exams') rows = [['Data','Nome','Tipo','Materia','Pontos','Total','Percentual','Acertos','Erros','Branco','Tempo(min)','Confianca','Dificuldade','Obs']].concat(
+    db.exams.map(e => [e.date, e.name, e.type, e.subjectId ? subjName(e.subjectId) : 'Geral', e.score, e.total, e.pct.toFixed(1), e.ok ?? '', e.wrong ?? '', e.blank ?? '', e.time ?? '', e.conf, e.diff, e.note]));
+  else if (kind === 'errors') rows = [['Data','Materia','Item','Origem','Resposta','Correta','Motivo','Anotacao']].concat(
+    db.errors.map(e => [e.date, subjName(e.subjectId), itemName(e.itemId), e.source, e.given, e.correct, e.reason, e.note]));
+  else rows = [['Materia','Item','Status','Prioridade','Dominio','Horas','Proxima revisao']].concat(
+    db.items.map(i => [subjName(i.subjectId), i.name, i.status, i.priority, i.mastery || '', (itemStats(i.id).net / 3600000).toFixed(2), i.nextReview]));
+  const csv = '\ufeff' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+  download(`central_cacdista_${kind}.csv`, csv, 'text/csv;charset=utf-8');
+}
+function backup() { download('central_cacdista_backup.json', JSON.stringify(db, null, 2), 'application/json'); }
+function restore(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!d.subjects || !d.sessions) throw 0;
+      ['items','exams','errors','events'].forEach(k => d[k] = d[k] || []);
+      d.version = VERSION; d.editalLabel = (!d.editalLabel || OLD_LABELS.includes(d.editalLabel)) ? DEFAULT_LABEL : d.editalLabel;
+      mergeSubjects(d); loadAnnex(d);
+      db = d; save(); applyTheme(); renderAll(); alert('Backup restaurado.');
+    } catch { alert('Arquivo inválido.'); }
+  };
+  r.readAsText(f);
+}
+
+// ---------- Inicialização ----------
+function renderAll() {
+  renderLabel(); fillSelects(); renderToday(); renderEdital(); renderCron(); renderHist(); renderReports();
+  renderExams(); renderErrors(); renderSubjTb(); tick();
+}
+$('mDate').value = today(); $('rDate').value = today(); $('eDate').value = today(); $('evDate').value = today();
+applyTheme(); go('hoje');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
